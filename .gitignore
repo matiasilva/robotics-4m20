@@ -1,0 +1,9 @@
+/test/
+
+# Ignore everything but world files from worlds directory
+/worlds/*
+!/worlds/*.wbt
+
+/.idea/
+
+*~

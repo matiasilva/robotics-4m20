@@ -1,0 +1,82 @@
+#VRML_SIM R2022a utf8
+
+WorldInfo {
+  basicTimeStep 32
+  gpsCoordinateSystem "local"
+}
+Viewpoint {
+  orientation -0.21220981592522112 0.7858094641562345 0.5809220946628517 0.7639321557215966
+  position -5.4827406052244125 -2.621287402685312 3.997878627951673
+}
+TurtleBot3Burger {
+  translation -1.5 0 0
+  rotation 0 0 1 -1.3089953071795861
+  controller "<extern>"
+  controllerArgs [
+    ""
+  ]
+  extensionSlot [
+    Solid {
+      name "imu_link"
+    }
+    GPS {
+    }
+    InertialUnit {
+      name "inertial_unit"
+    }
+    RobotisLds01 {
+      name "scan"
+    }
+  ]
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+CircleArena {
+  radius 2
+  wallThickness 0.06
+  wallHeight 0.2
+  subdivision 56
+}
+OilBarrel {
+  translation 1.23 0.42 0.075
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation -0.89 0.26 0.075
+  name "oil barrel(1)"
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation 0.73 -0.57 0.075
+  name "oil barrel(2)"
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation 0 -1.28 0.075
+  name "oil barrel(3)"
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation -1.34 -0.91 0.075
+  name "oil barrel(4)"
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation 0 -0.34 0.075
+  name "oil barrel(5)"
+  height 0.22
+  radius 0.08
+}
+OilBarrel {
+  translation 0 1.09 0.075
+  name "oil barrel(6)"
+  height 0.22
+  radius 0.08
+}
