@@ -53,7 +53,7 @@ def braitenberg(front, front_left, front_right, left, right):
     max_u = .2
     max_w = np.pi / 4.
     safety_dist = .5
-    
+
     return u, w
 
 
@@ -93,7 +93,7 @@ class Particle(object):
         # particle can be repositioned randomly in the arena.
 
         # Solution:
-        
+
         pass
 
     def compute_weight(self, front, front_left, front_right, left, right):
@@ -111,13 +111,14 @@ class Particle(object):
 
     def ray_trace(self, angle):
         """Returns the distance to the first obstacle from the particle."""
-
+        wall_off = np.pi/2.
+        cyl_off = np.pi
         def intersection_segment(x1, x2, y1, y2):
             point1 = np.array([x1, y1], dtype=np.float32)
             point2 = np.array([x2, y2], dtype=np.float32)
             v1 = self._pose[:2] - point1
             v2 = point2 - point1
-            v3 = np.array([np.cos(angle + self._pose[YAW]), np.sin(angle + self._pose[YAW])],
+            v3 = np.array([np.cos(angle + self._pose[YAW] + wall_off), np.sin(angle + self._pose[YAW]) + wall_off],
                           dtype=np.float32)
             t1 = np.cross(v2, v1) / np.dot(v2, v3)
             t2 = np.dot(v1, v3) / np.dot(v2, v3)
@@ -127,7 +128,7 @@ class Particle(object):
 
         def intersection_cylinder(x, y, r):
             center = np.array([x, y], dtype=np.float32)
-            v = np.array([np.cos(angle + self._pose[YAW]), np.sin(angle + self._pose[YAW])],
+            v = np.array([np.cos(angle + self._pose[YAW] + cyl_off), np.sin(angle + self._pose[YAW] + cyl_off)],
                          dtype=np.float32)
 
             v1 = center - self._pose[:2]
@@ -243,8 +244,8 @@ class GroundtruthPose(Node):
         self._pose = np.array([np.nan, np.nan, np.nan], dtype=np.float32)
 
     def callback(self, msg):
-        self._pose[X] = msg.pose.pose.position.x 
-        self._pose[Y] = msg.pose.pose.position.y 
+        self._pose[X] = msg.pose.pose.position.x
+        self._pose[Y] = msg.pose.pose.position.y
         _, _, yaw = R.from_quat([
             msg.pose.pose.orientation.x,
             msg.pose.pose.orientation.y,

@@ -35,7 +35,7 @@ def braitenberg(front, front_left, front_right, left, right):
     max_w = np.pi / 4.
     safety_dist = .5
 
-    # Solution: 
+    # Solution:
     return u, w
 
 
@@ -48,7 +48,7 @@ def rule_based(front, front_left, front_right, left, right):
     max_w = np.pi / 4.
     safety_dist = .5
 
-    # Solution: 
+    # Solution:
 
     return u, w
 
