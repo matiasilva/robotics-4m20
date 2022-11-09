@@ -1,0 +1,17 @@
+#VRML_SIM R2022a utf8
+
+WorldInfo {
+  basicTimeStep 32
+}
+Viewpoint {
+  orientation -0.39222597313517027 0.10450858751869148 0.9139128739289194 2.6638737025238735
+  position 5.1900395124109515 -3.0802047604411573 6.3672566773653685
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Floor {
+  size 50 50
+}
+
