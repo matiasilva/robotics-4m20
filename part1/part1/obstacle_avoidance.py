@@ -33,7 +33,6 @@ def braitenberg(front, front_left, front_right, left, right):
     axle = 0.16
 
     # limits of distance sensor from 0.5 to 3.5
-    # chosen smooth fn lnx from 0 to 1.25
 
     max_u = .2
     max_w = np.pi / 4.
@@ -41,7 +40,7 @@ def braitenberg(front, front_left, front_right, left, right):
 
     # vr, vl is a linear sum of weighted inputs
     # each sensor input needs a pre-treatment with a smooth function
-    #print(front, front_left, front_right, left, right)
+    # the pre treatment 'normalizes' the inputs wrt to the safety distance
     fl = pre_treat(front_left, safety_dist)
     fr = pre_treat(front_right, safety_dist)
     l = pre_treat(left, safety_dist)
@@ -58,6 +57,7 @@ def braitenberg(front, front_left, front_right, left, right):
     return u, w
 
 def pre_treat(x, safety_dist):
+    # sensor limits
     if x == np.inf or x > 3.5:
         x = 3.5
 
@@ -67,6 +67,7 @@ def pre_treat(x, safety_dist):
     return np.exp(safety_dist)*np.exp(-x)
 
 
+# rule base, has to be renamed so that it can be run
 def braaitenberg(front, front_left, front_right, left, right):
     u = 0.  # [m/s]
     w = 0.  # [rad/s] going counter-clockwise.

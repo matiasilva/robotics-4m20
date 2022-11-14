@@ -50,6 +50,7 @@ def braitenberg(front, front_left, front_right, left, right):
     u = 0.  # [m/s]
     w = 0.  # [rad/s] going counter-clockwise.
 
+    # physical vehicle constants
     rad = 0.066
     axle = 0.16
 
@@ -104,6 +105,8 @@ class Particle(object):
         # particles close to a good solution.
 
         # Solution:
+        # if no previous pose is specified, pick a location at random
+        # on the entire canvas, yaw has full 360 reach
         if like_pose is None:
             self._pose[X] = np.random.uniform(-2, 2)
             self._pose[Y] = np.random.uniform(-2, 2)
@@ -115,6 +118,7 @@ class Particle(object):
                 self._pose[YAW] = np.random.uniform(-np.pi, np.pi)
         else:
             # generate this particle close to the given pose
+            # choose normal distribution to bunch up values at desired pose
             sigma = 0.1
             self._pose[X] = like_pose[X] + np.random.normal(0, sigma)
             self._pose[Y] = like_pose[Y] + np.random.normal(0, sigma)
@@ -150,16 +154,19 @@ class Particle(object):
 
         # Solution:
 
+        # decompose robot's x speed as its forward speed using particle's yaw
+        # effectively a conversion from local robot coords to global coords
         u = abs(delta_pose[0])
-        dx = (delta_pose[0] + np.random.normal(0, 0.1*abs(u)))*np.cos(self._pose[YAW])
-        dy = (delta_pose[0]+  np.random.normal(0, 0.1*abs(u)))*np.sin(self._pose[YAW])
-        dyaw = delta_pose[YAW]
+        deltax = (delta_pose[0] + np.random.normal(0, 0.1*abs(u)))*np.cos(self._pose[YAW])
+        deltay = (delta_pose[0]+  np.random.normal(0, 0.1*abs(u)))*np.sin(self._pose[YAW])
+        deltayaw = delta_pose[YAW]
         w = abs(delta_pose[YAW])
         
-        self._pose[X] += dx 
-        self._pose[Y] += dy
-        self._pose[YAW] += dyaw + np.random.normal(0, 0.1*w)
+        self._pose[X] += deltax 
+        self._pose[Y] += deltay
+        self._pose[YAW] += deltayaw + np.random.normal(0, 0.1*w)
 
+        # give some particles a chance to "respawn" elsewhere
         if np.random.uniform(0,1) < 0.1:
             self._pose[X] = np.random.uniform(-2, 2)
             self._pose[Y] = np.random.uniform(-2, 2)
@@ -180,6 +187,7 @@ class Particle(object):
         sigma = .8
         variance = sigma ** 2.
 
+        # ensure physical limits are enforced
         if front == np.inf or front > 3.5:
             front = 3.5
         if left == np.inf or left > 3.5:
@@ -191,6 +199,7 @@ class Particle(object):
         if front_right == np.inf or front_right > 3.5:
             front_right = 3.5
 
+        # kill off any particles outside the map or on an obstacle
         if not self.is_valid():
             self._weight = 0
         else:
@@ -208,13 +217,14 @@ class Particle(object):
             leftdist = self.ray_trace(lefta)
             rightdist = self.ray_trace(righta)
 
+            # evaluate gaussian prob (comparing two distances)
             frontp = norm.pdf(frontdist, loc = front, scale = sigma)
             frontleftp = norm.pdf(frontleftdist, loc = front_left, scale = sigma)
             frontrightp = norm.pdf(frontrightdist, loc = front_right, scale = sigma)
             leftp = norm.pdf(leftdist, loc = left, scale = sigma)
             rightp = norm.pdf(rightdist, loc = right, scale = sigma)
 
-
+            # final weight is product of all probabilities
             w = frontp * frontleftp * frontrightp * leftp * rightp
             self._weight = w
 
@@ -424,24 +434,30 @@ class Localization(Node):
             # active particles doesn't fall too low, and replenish using random
             # new particles if needed.
 
-            mean_weight = total_weight/self._num_particles
-            sortedparticles = sorted(self._particles, key=lambda p:p.weight, reverse=True)
+            sensitivity = 0.4
+            particle_thresh = 0.6
+            # re-sampling based on maximum but can also experiment with mean
+
+            # sort in descending order by weight
+            particles_sorted = sorted(self._particles, key=lambda p:p.weight, reverse=True)
             #Node.get_logger(self).info(f'topbottom! {sortedparticles[0].weight} {sortedparticles[-1].weight}')                                        
             new_particles = []
-            for i, particle in enumerate(sortedparticles):
+            mean_weight = total_weight/self._num_particles
+            for i, particle in enumerate(particles_sorted):
                 #if abs(particle.pose[X]) > 2 or abs(particle.pose[Y]) > 2:
                 #    Node.get_logger(self).info(f'LOOK! {particle.pose}, {particle.weight}')    
 
-                if particle.weight >= 0.4*sortedparticles[0].weight:
+                if particle.weight >= sensitivity*particles_sorted[0].weight:
                     new_particles.append(particle)
             
-            np_length = len(new_particles)
+            curr_new_particles = len(new_particles)
             
             # If number of particles fall below 60% of total particles, resample 
-            if np_length < 0.6* self._num_particles:
-                add_particles = self._num_particles - np_length
-                for i in range(0, add_particles):
-                    rand_int = np.random.randint(0, np_length)
+            if curr_new_particles < particle_thresh* self._num_particles:
+                to_add = self._num_particles - curr_new_particles
+                for i in range(to_add):
+                    rand_int = np.random.randint(0, curr_new_particles)
+                    # copy the pose of another random particle
                     new_particles.append(Particle(new_particles[rand_int].pose))
 
             # Solution:
