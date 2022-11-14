@@ -28,8 +28,12 @@ from sensor_msgs.msg import ChannelFloat32
 from geometry_msgs.msg import Point32
 from std_msgs.msg import Header
 # Odometry.
+
+from random import random
 from nav_msgs.msg import Odometry
 
+# stats
+from scipy.stats import norm
 
 # Constants used for indexing.
 X = 0
@@ -46,15 +50,42 @@ def braitenberg(front, front_left, front_right, left, right):
     u = 0.  # [m/s]
     w = 0.  # [rad/s] going counter-clockwise.
 
-    # MISSING: Implement a braitenberg controller that takes the range
-    # measurements given in argument to steer the robot safely.
+    rad = 0.066
+    axle = 0.16
 
-    # Solution:
+    # limits of distance sensor from 0.5 to 3.5
+    # chosen smooth fn lnx from 0 to 1.25
+
     max_u = .2
     max_w = np.pi / 4.
     safety_dist = .5
 
+    # vr, vl is a linear sum of weighted inputs
+    # each sensor input needs a pre-treatment with a smooth function
+    #print(front, front_left, front_right, left, right)
+    fl = pre_treat(front_left, safety_dist)
+    fr = pre_treat(front_right, safety_dist)
+    l = pre_treat(left, safety_dist)
+    r = pre_treat(right, safety_dist)
+    f = pre_treat(front, safety_dist)
+
+    vl = 2 + 0.4 * fl + 0.3 * l + 0.2 * f
+    vr = 2 + 0.4 * fr + 0.3 * r - 0.2 * f
+
+    u = rad * 0.5 * (vl + vr)
+    w = (rad/axle) * (vr - vl)
+
+    # Solution:
     return u, w
+
+def pre_treat(x, safety_dist):
+    if x == np.inf or x > 3.5:
+        x = 3.5
+
+    if x < 0.012:
+        x = 0.012
+
+    return np.exp(safety_dist)*np.exp(-x)
 
 
 class Particle(object):
@@ -73,6 +104,26 @@ class Particle(object):
         # particles close to a good solution.
 
         # Solution:
+        if like_pose is None:
+            self._pose[X] = np.random.uniform(-2, 2)
+            self._pose[Y] = np.random.uniform(-2, 2)
+            self._pose[YAW] = np.random.uniform(-np.pi, np.pi)
+
+            while not self.is_valid():
+                self._pose[X] = np.random.uniform(-2, 2)
+                self._pose[Y] = np.random.uniform(-2, 2)
+                self._pose[YAW] = np.random.uniform(-np.pi, np.pi)
+        else:
+            # generate this particle close to the given pose
+            sigma = 0.1
+            self._pose[X] = like_pose[X] + np.random.normal(0, sigma)
+            self._pose[Y] = like_pose[Y] + np.random.normal(0, sigma)
+            self._pose[YAW] = like_pose[YAW] + np.random.normal(0, sigma)
+            while not self.is_valid():
+                self._pose[X] = like_pose[X] + np.random.normal(0, sigma)
+                self._pose[Y] = like_pose[Y] + np.random.normal(0, sigma)
+                self._pose[YAW] = like_pose[YAW] + np.random.normal(0, sigma)
+
 
     def is_valid(self):
         # MISSING: Implement a function that returns True if the current particle
@@ -80,6 +131,11 @@ class Particle(object):
         # and compute_weight().
 
         # Solution:
+
+        is_not_intersecting = ((self._pose[0]-0.5)**2 + (self._pose[1]-0.6)**2) > 0.3**2
+        is_within_bounds = (self._pose[0] > -2) and (self._pose[0] < 2) and (self._pose[1] > -2) and (self._pose[1] < 2)
+
+        return is_within_bounds and is_not_intersecting 
 
 
     def move(self, delta_pose):
@@ -94,7 +150,25 @@ class Particle(object):
 
         # Solution:
 
-        pass
+        u = abs(delta_pose[0])
+        dx = (delta_pose[0] + np.random.normal(0, 0.1*abs(u)))*np.cos(self._pose[YAW])
+        dy = (delta_pose[0]+  np.random.normal(0, 0.1*abs(u)))*np.sin(self._pose[YAW])
+        dyaw = delta_pose[YAW]
+        w = abs(delta_pose[YAW])
+        
+        self._pose[X] += dx 
+        self._pose[Y] += dy
+        self._pose[YAW] += dyaw + np.random.normal(0, 0.1*w)
+
+        if np.random.uniform(0,1) < 0.1:
+            self._pose[X] = np.random.uniform(-2, 2)
+            self._pose[Y] = np.random.uniform(-2, 2)
+            self._pose[YAW] = np.random.uniform(-np.pi, np.pi)
+
+            while not self.is_valid():
+                self._pose[X] = np.random.uniform(-2, 2)
+                self._pose[Y] = np.random.uniform(-2, 2)
+                self._pose[YAW] = np.random.uniform(-np.pi, np.pi)        
 
     def compute_weight(self, front, front_left, front_right, left, right):
         # MISSING: Update the particle weight self._weight according to measurements.
@@ -106,8 +180,44 @@ class Particle(object):
         sigma = .8
         variance = sigma ** 2.
 
-        # Solution:
-        return w
+        if front == np.inf or front > 3.5:
+            front = 3.5
+        if left == np.inf or left > 3.5:
+            left = 3.5
+        if right == np.inf or right > 3.5:
+            right = 3.5
+        if front_left == np.inf or front_left > 3.5:
+            front_left = 3.5
+        if front_right == np.inf or front_right > 3.5:
+            front_right = 3.5
+
+        if not self.is_valid():
+            self._weight = 0
+        else:
+            # find angles of all beams
+            fronta = self._pose[YAW]
+            frontlefta = fronta + np.pi/4
+            frontrighta = fronta - np.pi/4
+            lefta = fronta + np.pi/2
+            righta = fronta - np.pi/2
+
+            # find dist to those beams
+            frontdist = self.ray_trace(fronta)
+            frontleftdist = self.ray_trace(frontlefta)
+            frontrightdist = self.ray_trace(frontrighta)
+            leftdist = self.ray_trace(lefta)
+            rightdist = self.ray_trace(righta)
+
+            frontp = norm.pdf(frontdist, loc = front, scale = sigma)
+            frontleftp = norm.pdf(frontleftdist, loc = front_left, scale = sigma)
+            frontrightp = norm.pdf(frontrightdist, loc = front_right, scale = sigma)
+            leftp = norm.pdf(leftdist, loc = left, scale = sigma)
+            rightp = norm.pdf(rightdist, loc = right, scale = sigma)
+
+
+            w = frontp * frontleftp * frontrightp * leftp * rightp
+            self._weight = w
+
 
     def ray_trace(self, angle):
         """Returns the distance to the first obstacle from the particle."""
@@ -118,7 +228,7 @@ class Particle(object):
             point2 = np.array([x2, y2], dtype=np.float32)
             v1 = self._pose[:2] - point1
             v2 = point2 - point1
-            v3 = np.array([np.cos(angle + self._pose[YAW] + wall_off), np.sin(angle + self._pose[YAW]) + wall_off],
+            v3 = np.array([np.cos(angle + self._pose[YAW] + wall_off), np.sin(angle + self._pose[YAW] + wall_off)],
                           dtype=np.float32)
             t1 = np.cross(v2, v1) / np.dot(v2, v3)
             t2 = np.dot(v1, v3) / np.dot(v2, v3)
@@ -269,10 +379,10 @@ class Localization(Node):
         self._laser_subscriber = self.create_subscription(LaserScan, 'TurtleBot3Burger/scan', self._laser.callback, 5)
         self._publisher = self.create_publisher(Twist, 'cmd_vel', 5)
         self._groundtruth = GroundtruthPose()
-        self._groundtruth_subscriber = self.create_subscription(Odometry, 'odom',
+        self._groundtruth_subscriber = self.create_subscription(Odometry, '/robot0/diffdrive_controller/odom',
                                                                 self._groundtruth.callback, 5)
         self._motion = Motion()
-        self._motion_subscriber = self.create_subscription(Odometry, 'odom',
+        self._motion_subscriber = self.create_subscription(Odometry, '/robot0/diffdrive_controller/odom',
                                                            self._motion.callback, 1)
 
         self._particle_publisher = self.create_publisher(PointCloud, 'particles', 1)
@@ -282,7 +392,7 @@ class Localization(Node):
         file_path = os.path.join(share_tmp_dir, 'webots_exercise.txt')
         self._temp_file = file_path
 
-        self._num_particles = 50
+        self._num_particles = 80
         self._particles = [Particle() for _ in range(self._num_particles)]
         self._pose_history = []
         self._rate_limiter = self.create_timer(timer_period_sec=0.1, callback=self.timer_callback)
@@ -314,7 +424,25 @@ class Localization(Node):
             # active particles doesn't fall too low, and replenish using random
             # new particles if needed.
 
+            mean_weight = total_weight/self._num_particles
+            sortedparticles = sorted(self._particles, key=lambda p:p.weight, reverse=True)
+            #Node.get_logger(self).info(f'topbottom! {sortedparticles[0].weight} {sortedparticles[-1].weight}')                                        
             new_particles = []
+            for i, particle in enumerate(sortedparticles):
+                #if abs(particle.pose[X]) > 2 or abs(particle.pose[Y]) > 2:
+                #    Node.get_logger(self).info(f'LOOK! {particle.pose}, {particle.weight}')    
+
+                if particle.weight >= 0.4*sortedparticles[0].weight:
+                    new_particles.append(particle)
+            
+            np_length = len(new_particles)
+            
+            # If number of particles fall below 60% of total particles, resample 
+            if np_length < 0.6* self._num_particles:
+                add_particles = self._num_particles - np_length
+                for i in range(0, add_particles):
+                    rand_int = np.random.randint(0, np_length)
+                    new_particles.append(Particle(new_particles[rand_int].pose))
 
             # Solution:
             self._particles = new_particles;

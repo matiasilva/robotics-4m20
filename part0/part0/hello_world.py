@@ -7,7 +7,7 @@ class SimpleNode(Node):
 
     def __init__(self):
         super().__init__('hello_world')
-        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 5)
+        self.publisher_ = self.create_publisher(Twist, 'robot0/cmd_vel', 5)
         timer_period = .2  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 

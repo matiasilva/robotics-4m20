@@ -29,26 +29,71 @@ def braitenberg(front, front_left, front_right, left, right):
     u = 0.  # [m/s]
     w = 0.  # [rad/s] going counter-clockwise.
 
-    # MISSING: Implement a braitenberg controller that takes the range
-    # measurements given in argument to steer the robot.
+    rad = 0.066
+    axle = 0.16
+
+    # limits of distance sensor from 0.5 to 3.5
+    # chosen smooth fn lnx from 0 to 1.25
+
     max_u = .2
     max_w = np.pi / 4.
     safety_dist = .5
 
+    # vr, vl is a linear sum of weighted inputs
+    # each sensor input needs a pre-treatment with a smooth function
+    #print(front, front_left, front_right, left, right)
+    fl = pre_treat(front_left, safety_dist)
+    fr = pre_treat(front_right, safety_dist)
+    l = pre_treat(left, safety_dist)
+    r = pre_treat(right, safety_dist)
+    f = pre_treat(front, safety_dist)
+
+    vl = 2 + 0.4 * fl + 0.3 * l + 0.2 * f
+    vr = 2 + 0.4 * fr + 0.3 * r - 0.2 * f
+
+    u = rad * 0.5 * (vl + vr)
+    w = (rad/axle) * (vr - vl)
+
     # Solution:
     return u, w
 
+def pre_treat(x, safety_dist):
+    if x == np.inf or x > 3.5:
+        x = 3.5
 
-def rule_based(front, front_left, front_right, left, right):
+    if x < 0.012:
+        x = 0.012
+
+    return np.exp(safety_dist)*np.exp(-x)
+
+
+def braaitenberg(front, front_left, front_right, left, right):
     u = 0.  # [m/s]
     w = 0.  # [rad/s] going counter-clockwise.
+
+    rad = 0.066
+    axle = 0.16
 
     # MISSING: Implement a rule-based controller that avoids obstacles.
     max_u = .2
     max_w = np.pi / 4.
     safety_dist = .5
 
+    vl = 2
+    vr = 2
+
     # Solution:
+    if (front - safety_dist) < 0.1:
+        vl = vl + 3
+
+    if (front_left - safety_dist) < 0.1:
+        vl = vl + 3
+
+    if (front_right - safety_dist) < 0.1:
+        vr = vr + 3
+
+    u = rad * 0.5 * (vl + vr)
+    w = (rad/axle) * (vr - vl)
 
     return u, w
 
@@ -124,9 +169,10 @@ class ObstacleAvoidance(Node):
         self._laser_subscriber = self.create_subscription(LaserScan, 'TurtleBot3Burger/scan', self._laser.callback, 5)
         self._publisher = self.create_publisher(Twist, 'cmd_vel', 5)
         self._groundtruth = GroundtruthPose()
-        self._groundtruth_subscriber = self.create_subscription(Odometry, 'odom',
+        self._groundtruth_subscriber = self.create_subscription(Odometry, '/robot0/diffdrive_controller/odom',
                                                                 self._groundtruth.callback, 5)
         share_tmp_dir = os.path.join(get_package_share_directory('part1'), 'tmp')
+        print(share_tmp_dir)
         os.makedirs(share_tmp_dir, exist_ok=True)
         file_path = os.path.join(share_tmp_dir, 'webots_exercise.txt')
         self._temp_file = file_path
@@ -164,7 +210,7 @@ def run(args):
 
 def main():
     parser = argparse.ArgumentParser(description='Runs obstacle avoidance')
-    parser.add_argument('--mode', action='store', default='braitenberg', help='Method.',
+    parser.add_argument('--mode', action='store', default='rule_based', help='Method.',
                         choices=['braitenberg', 'rule_based'])
     args, unknown = parser.parse_known_args()
     run(args)
