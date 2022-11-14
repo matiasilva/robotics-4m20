@@ -22,31 +22,26 @@ REFRESH_RATE = 1. / 15.
 def euler(current_pose, t, dt):
   next_pose = current_pose.copy()
   u = 0.25
-  w = np.cos(t)
+  w = np.cos(np.floor(t))
+  print(w)
 
-  # MISSING: Use Euler's integration method to return the next pose of our robot.
-  # https://en.wikipedia.org/wiki/Euler_method
-  # t is the current time.
-  # dt is the time-step duration.
-  # current_pose[X] is the current x position.
-  # current_pose[Y] is the current y position.
-  # current_pose[YAW] is the current orientation of the robot.
-  # Update next_pose[X], next_pose[Y], next_pose[YAW].
+  # euler method: x = x_0 + v*dt
+  # polar conversion: vx = ucostheta
+  next_pose[X] = current_pose[X] + dt * u * np.cos(current_pose[YAW])
+  next_pose[Y] = current_pose[Y] + dt * u * np.sin(current_pose[YAW])
+  next_pose[YAW] = current_pose[YAW] + w * dt
 
   return next_pose
 
 
 def rk4(current_pose, t, dt):
   next_pose = current_pose.copy()
+  u = 0.25
   
-  # MISSING: Use classical Runge-Kutta to return the next pose of our robot.
-  # https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
-  # t is the current time.
-  # dt is the time-step duration.
-  # current_pose[X] is the current x position.
-  # current_pose[Y] is the current y position.
-  # current_pose[YAW] is the current orientation of the robot.
-  # Update next_pose[X], next_pose[Y], next_pose[YAW].
+  # rk4 method remains the same for x and y as derivative is time, pos invariant
+  next_pose[X] = current_pose[X] + dt * u * np.cos(current_pose[YAW])
+  next_pose[Y] = current_pose[Y] + dt * u * np.sin(current_pose[YAW])
+  next_pose[YAW] = current_pose[YAW] + dt * (1/6) * (np.cos(np.floor(t)) + 4*np.cos(np.floor(t + dt*0.5)) + np.cos(np.floor(t + dt)))
 
   return next_pose
 
