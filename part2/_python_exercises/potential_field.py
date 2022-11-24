@@ -8,8 +8,8 @@ import numpy as np
 
 
 WALL_OFFSET = 2.
-CYLINDER_POSITION = np.array([.3, .2], dtype=np.float32)
-CYLINDER_RADIUS = .3
+CYLINDER_POSITION = np.array([0,0], dtype=np.float32)
+CYLINDER_RADIUS = 0.3
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)
 START_POSITION = np.array([-1.5, -1.5], dtype=np.float32)
 MAX_SPEED = .5
@@ -29,6 +29,8 @@ def get_velocity_to_reach_goal(position, goal_position):
 
   # Solution:
 
+  v = 0.3*(goal_position - position)
+
   return v
 
 
@@ -41,8 +43,36 @@ def get_velocity_to_avoid_obstacles(position, obstacle_positions, obstacle_radii
   # speeds that are larger than max_speed for each obstacle. Both obstacle_positions
   # and obstacle_radii are lists.
 
+  max_force = max(np.linalg.norm(GOAL_POSITION - np.array([2,-2])), np.linalg.norm(GOAL_POSITION - np.array([-2,2])), np.linalg.norm(GOAL_POSITION - np.array([-2,-2])), np.linalg.norm(GOAL_POSITION - np.array([2,2])))
+  max_obs_force = 0
+  for obs in obstacle_positions:
+    tmp = max(np.linalg.norm(obs - np.array([2,-2])), np.linalg.norm(obs - np.array([-2,2])), np.linalg.norm(obs - np.array([-2,-2])), np.linalg.norm(obs - np.array([2,2])))
+    if tmp > max_obs_force:
+      max_obs_force = tmp
   # Solution:
-  
+  #print(position)
+  for i, opos in enumerate(obstacle_positions):
+    v_temp = np.zeros_like(v)
+    r = obstacle_radii[i] 
+    a = np.arctan2(opos[1]-position[1], opos[0]-position[0])
+    off_x = r * np.cos(a)
+    off_y = r * np.sin(a)
+
+    v_temp = opos - position
+    v_temp = v_temp * -1
+    v_temp[0] = v_temp[0] - off_x
+    v_temp[1] = v_temp[1] - off_y
+
+    dist = np.linalg.norm(v_temp)
+    v_temp = normalize(v_temp)
+    df = max_obs_force - dist
+    v_temp = v_temp * 1.3* ((df*df)/(max_obs_force*max_obs_force))
+    v_temp = cap(v_temp, max_speed=MAX_SPEED)
+
+    if np.linalg.norm(v_temp) < 1e-2:
+      print("hi")
+      v_temp = normalize(v_temp) * 1e-1
+    v += v_temp
 
   return v
 
