@@ -70,7 +70,7 @@ def get_relative_position(absolute_pose, absolute_position):
     relative_position -= absolute_pose[:2]
     t1 = np.cos(absolute_pose[YAW])
     t2 = np.sin(absolute_pose[YAW])
-    relative_position *= np.array([[t1, -t2], [t2, t1]])
+    relative_position = np.dot(relative_position, np.array([[t1, -t2], [t2, t1]]))
     return relative_position
 
 
