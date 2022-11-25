@@ -53,6 +53,9 @@ def feedback_linearized(pose, velocity, epsilon):
 
     # Solution:
 
+    u = velocity[X]*np.cos(pose[YAW]) + velocity[Y]*np.sin(pose[YAW])
+    w = (1/epsilon)*(-velocity[X]*np.sin(YAW) + velocity[Y]*np.cos(YAW))
+
     return u, w
 
 
