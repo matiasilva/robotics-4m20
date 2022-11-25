@@ -20,7 +20,7 @@ MAX_SPEED = .5
 # MISSING: Implementations for the following two cases (see handout).
 # Solution:
 CENTER_OBSTACLE = False
-BONUS = True
+BONUS = False
 
 
 
@@ -106,14 +106,15 @@ def get_velocity(position, mode='all'):
 
   v = v_goal + v_avoid
 
-  # mitigate against minima
-  # ensure not within a threshold of goal position
-  dist_goal = np.linalg.norm(GOAL_POSITION - position)
-  if dist_goal > 1.5:
-    if np.linalg.norm(v_goal + v_avoid) < 0.09:
-      # create small local vel field that is perpendicular to v_goal
-      v[0] = v_goal[1]
-      v[1] = -v_goal[0]
+  if BONUS:
+    # mitigate against minima
+    # ensure not within a threshold of goal position
+    dist_goal = np.linalg.norm(GOAL_POSITION - position)
+    if dist_goal > 1.5:
+      if np.linalg.norm(v_goal + v_avoid) < 0.09:
+        # create small local vel field that is perpendicular to v_goal
+        v[0] = v_goal[1]
+        v[1] = -v_goal[0]
 
   return cap(v, max_speed=MAX_SPEED)
 
