@@ -9,6 +9,8 @@ import numpy as np
 
 WALL_OFFSET = 2.
 CYLINDER_POSITION = np.array([0,0], dtype=np.float32)
+CYLINDER_POSITION1 = np.array([0.5,0], dtype=np.float32)
+CYLINDER_POSITION2 = np.array([0,0.5], dtype=np.float32)
 CYLINDER_RADIUS = 0.3
 GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)
 START_POSITION = np.array([-1.5, -1.5], dtype=np.float32)
@@ -18,7 +20,7 @@ MAX_SPEED = .5
 # MISSING: Implementations for the following two cases (see handout).
 # Solution:
 CENTER_OBSTACLE = False
-BONUS = False
+BONUS = True
 
 
 
@@ -30,6 +32,7 @@ def get_velocity_to_reach_goal(position, goal_position):
   # Solution:
 
   v = 0.3*(goal_position - position)
+  v = cap(v, max_speed=MAX_SPEED)
 
   return v
 
@@ -69,9 +72,6 @@ def get_velocity_to_avoid_obstacles(position, obstacle_positions, obstacle_radii
     v_temp = v_temp * 1.3* ((df*df)/(max_obs_force*max_obs_force))
     v_temp = cap(v_temp, max_speed=MAX_SPEED)
 
-    if np.linalg.norm(v_temp) < 1e-2:
-      print("hi")
-      v_temp = normalize(v_temp) * 1e-1
     v += v_temp
 
   return v
@@ -103,9 +103,18 @@ def get_velocity(position, mode='all'):
       ([CYLINDER_RADIUS] * 2) if BONUS else [CYLINDER_RADIUS])
   else:
     v_avoid = np.zeros(2, dtype=np.float32)
+
   v = v_goal + v_avoid
-  # Solution (BONUS):
-  
+
+  # mitigate against minima
+  # ensure not within a threshold of goal position
+  dist_goal = np.linalg.norm(GOAL_POSITION - position)
+  if dist_goal > 1.5:
+    if np.linalg.norm(v_goal + v_avoid) < 0.09:
+      # create small local vel field that is perpendicular to v_goal
+      v[0] = v_goal[1]
+      v[1] = -v_goal[0]
+
   return cap(v, max_speed=MAX_SPEED)
 
 
@@ -143,7 +152,7 @@ if __name__ == '__main__':
   dt = 0.01
   x = START_POSITION
   positions = [x]
-  for t in np.arange(0., 20., dt):
+  for t in np.arange(0., 30., dt):
     v = get_velocity(x, args.mode)
     x = x + v * dt
     positions.append(x)

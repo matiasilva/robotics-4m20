@@ -37,7 +37,10 @@ def sample_random_position(occupancy_grid):
   # MISSING: Sample a valid random position (do not sample the yaw).
   # The corresponding cell must be free in the occupancy grid.
 
-  # Solution:
+  position[0] = np.random.uniform(-2, 2)
+  position[1] = np.random.uniform(-2, 2)
+  if not occupancy_grid.is_free(position):
+    return sample_random_position(occupancy_grid)
 
   return position
 
@@ -45,8 +48,6 @@ def sample_random_position(occupancy_grid):
 def adjust_pose(node, final_position, occupancy_grid):
   final_pose = node.pose.copy()
   final_pose[:2] = final_position
-  final_node = Node(final_pose)
-
   # MISSING: Check whether there exists a simple path that links node.pose
   # to final_position. This function needs to return a new node that has
   # the same position as final_position and a valid yaw. The yaw is such that
@@ -58,7 +59,29 @@ def adjust_pose(node, final_position, occupancy_grid):
   # Solution:
   # Compute the angle between node[YAW] and the segment linking node
   # and final_position. By symmetry, the final yaw is the opposite of that.
-  
+
+
+  # from a diagram with 2 tangents at node and final_node
+  dist = final_pose[:2] - node.pose[:2]
+  final_pose[2] = 2 * np.arctan2(dist[1], dist[0]) - node.pose[YAW]
+  final_node = Node(final_pose)
+
+  center, rad = find_circle(node, final_node)
+  stepnum = np.floor(rad / occupancy_grid.resolution)
+  v1 =  center - node.pose[:2]
+  v2 = center - final_pose[:2]
+  a2 = np.arctan2(v2[1], v2[0]) - np.arctan2(v1[1], v1[0])
+  steps = abs(a2) / stepnum
+
+  test_pose = np.zeros(2)
+  theta = np.arctan2(v1[1], v1[0])
+  while theta < abs(a2):
+    test_pose[0] = rad * np.cos(theta)
+    test_pose[1] = rad * np.sin(theta)
+    if occupancy_grid.is_occupied(center + test_pose):
+      return None
+    theta += steps
+
   return final_node
 
 
@@ -311,7 +334,7 @@ if __name__ == '__main__':
 
   # Load map.
   with open(args.map + '.yaml') as fp:
-    data = yaml.load(fp)
+    data = yaml.full_load(fp)
   img = read_pgm(os.path.join(os.path.dirname(args.map), data['image']))
   occupancy_grid = np.empty_like(img, dtype=np.int8)
   occupancy_grid[:] = UNKNOWN
