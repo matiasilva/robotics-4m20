@@ -31,7 +31,7 @@ def get_velocity_to_reach_goal(position, goal_position):
 
   # Solution:
 
-  v = 0.3*(goal_position - position)
+  v = 2*(goal_position - position)
   v = cap(v, max_speed=MAX_SPEED)
 
   return v
@@ -69,7 +69,7 @@ def get_velocity_to_avoid_obstacles(position, obstacle_positions, obstacle_radii
     dist = np.linalg.norm(v_temp)
     v_temp = normalize(v_temp)
     df = max_obs_force - dist
-    v_temp = v_temp * 1.3* ((df*df)/(max_obs_force*max_obs_force))
+    v_temp = v_temp * 0.8* ((df*df)/(max_obs_force*max_obs_force))
     v_temp = cap(v_temp, max_speed=MAX_SPEED)
 
     v += v_temp

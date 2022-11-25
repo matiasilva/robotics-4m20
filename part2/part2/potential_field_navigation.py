@@ -36,7 +36,7 @@ GOAL_POSITION = np.array([1.5, 1.5], dtype=np.float32)
 MAX_SPEED = .25
 EPSILON = .2
 
-USE_RELATIVE_POSITIONS = False
+USE_RELATIVE_POSITIONS = True
 
 X = 0
 Y = 1
@@ -67,6 +67,10 @@ def get_relative_position(absolute_pose, absolute_position):
 
     # Solution:
 
+    relative_position -= absolute_pose[:2]
+    t1 = np.cos(absolute_pose[YAW])
+    t2 = np.sin(absolute_pose[YAW])
+    relative_position *= np.array([[t1, -t2], [t2, t1]])
     return relative_position
 
 
