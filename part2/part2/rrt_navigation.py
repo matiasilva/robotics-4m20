@@ -78,9 +78,17 @@ def get_velocity(position, path_points):
     # point located at position.
 
     # Solution:
-    global STATE
-    v = normalize(path_points[STATE] - position) * SPEED
-    STATE += 1
+    #for i, p in enumerate(path_points):
+    #    d = np.linalg.norm(position - p)
+    #    # if we're close to this point, let's move closer to the next one
+    #    if d < .3:
+    #        v = normalize(path_points[i+1] - position) * SPEED
+    #        break
+    #    else:
+    #        # if we're not close to anything, move towards point 0
+    #        v = normalize(path_points[0] - position) * SPEED
+
+    v = 0.25*SPEED*normalize(path_points[-1]-position)
 
     return v
 
@@ -217,7 +225,7 @@ class RTTNavigation(Node):
         super().__init__('rtt_navigation')
 
         # Update control every 100 ms.
-        self._rate_limiter = self.create_timer(timer_period_sec=0.1, callback=self._timer_callback)
+        self._rate_limiter = self.create_timer(timer_period_sec=0.5, callback=self._timer_callback)
         self._publisher = self.create_publisher(Twist, 'cmd_vel', 5)
         self._path_publisher = self.create_publisher(Path, 'path', 1)
 
@@ -229,6 +237,7 @@ class RTTNavigation(Node):
                                                            self._goal.callback, 1)
 
         self._frame_id = 0
+        #self._slam.update(draw_map=True)
         self._current_path = np.array([]);
         self._previous_time, _ = self.get_clock().now().seconds_nanoseconds()
 
