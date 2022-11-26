@@ -63,7 +63,9 @@ def adjust_pose(node, final_position, occupancy_grid):
 
   # from a diagram with 2 tangents at node and final_node
   dist = final_pose[:2] - node.pose[:2]
-  final_pose[2] = 2 * np.arctan2(dist[1], dist[0]) - node.pose[YAW]
+  final_pose[YAW] = 2 * np.arctan2(dist[1], dist[0]) - node.pose[YAW]
+  if final_pose[YAW] > np.pi:
+    final_pose[YAW] -= 2*np.pi
   final_node = Node(final_pose)
 
   center, rad = find_circle(node, final_node)
@@ -75,6 +77,11 @@ def adjust_pose(node, final_position, occupancy_grid):
 
   test_pose = np.zeros(2)
   theta = np.arctan2(v1[1], v1[0])
+  clockwise = np.cross(node.pose, v1).item() > 0
+
+  if clockwise:
+    steps = -steps
+
   while theta < abs(a2):
     test_pose[0] = rad * np.cos(theta)
     test_pose[1] = rad * np.sin(theta)
