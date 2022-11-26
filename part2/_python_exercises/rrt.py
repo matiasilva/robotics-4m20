@@ -82,12 +82,13 @@ def adjust_pose(node, final_position, occupancy_grid):
   if clockwise:
     steps = -steps
 
-  while theta < abs(a2):
-    test_pose[0] = rad * np.cos(theta)
-    test_pose[1] = rad * np.sin(theta)
+  angles = np.arange(theta, a2+theta, steps)
+
+  for a in angles:
+    test_pose[0] = rad * np.cos(a)
+    test_pose[1] = rad * np.sin(a)
     if occupancy_grid.is_occupied(center + test_pose):
       return None
-    theta += steps
 
   return final_node
 
