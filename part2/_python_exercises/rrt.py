@@ -77,7 +77,7 @@ def adjust_pose(node, final_position, occupancy_grid):
 
   test_pose = np.zeros(2)
   theta = np.arctan2(v1[1], v1[0])
-  clockwise = np.cross(node.pose, v1).item() > 0
+  clockwise = np.cross(node.pose[:2], v1).item() > 0
 
   if clockwise:
     steps = -steps

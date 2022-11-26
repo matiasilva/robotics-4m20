@@ -41,6 +41,8 @@ X = 0
 Y = 1
 YAW = 2
 
+STATE = 0
+
 
 def feedback_linearized(pose, velocity, epsilon):
     u = 0.  # [m/s]
@@ -52,8 +54,16 @@ def feedback_linearized(pose, velocity, epsilon):
 
     # Solution:
 
+    u = velocity[X]*np.cos(pose[YAW]) + velocity[Y]*np.sin(pose[YAW])
+    w = (1/epsilon)*(-velocity[X]*np.sin(YAW) + velocity[Y]*np.cos(YAW))
+
     return u, w
 
+def normalize(v):
+  n = np.linalg.norm(v)
+  if n < 1e-2:
+    return np.zeros_like(v)
+  return v / n
 
 def get_velocity(position, path_points):
     v = np.zeros_like(position)
@@ -68,6 +78,9 @@ def get_velocity(position, path_points):
     # point located at position.
 
     # Solution:
+    global STATE
+    v = normalize(path_points[STATE] - position) * SPEED
+    STATE += 1
 
     return v
 
